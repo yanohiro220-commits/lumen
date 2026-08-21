@@ -1,0 +1,33 @@
+# Sieve of Eratosthenes.
+#= 25
+#= [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+#= 97
+
+fn sieve(limit) {
+  let flags = [];
+  for (let i = 0; i <= limit; i = i + 1) { push(flags, true); }
+  flags[0] = false;
+  if (limit >= 1) { flags[1] = false; }
+
+  for (let p = 2; p * p <= limit; p = p + 1) {
+    if (!flags[p]) { continue; }
+    for (let m = p * p; m <= limit; m = m + p) {
+      flags[m] = false;
+    }
+  }
+
+  let out = [];
+  for (let i = 0; i <= limit; i = i + 1) {
+    if (flags[i]) { push(out, i); }
+  }
+  return out;
+}
+
+let primes = sieve(100);
+print len(primes);
+
+let first_ten = [];
+for (let i = 0; i < 10; i = i + 1) { push(first_ten, primes[i]); }
+print first_ten;
+
+print primes[-1];

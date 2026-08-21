@@ -1,0 +1,41 @@
+# Closures capture by reference and outlive the frame that created them.
+#= 1
+#= 2
+#= 3
+#= 10
+#= 100
+#= [0, 1, 4, 9, 16]
+
+fn counter() {
+  let n = 0;
+  return fn() {
+    n = n + 1;
+    return n;
+  };
+}
+
+let next = counter();
+print next();
+print next();
+print next();
+
+# Each call to make_adder captures its own copy of `by`.
+fn make_adder(by) {
+  return fn(x) { return x + by; };
+}
+
+let add_ten = make_adder(10);
+let add_hundred = make_adder(100);
+print add_ten(0);
+print add_hundred(0);
+
+# A closure created inside a loop keeps the value it saw.
+fn map(xs, f) {
+  let out = [];
+  for (let i = 0; i < len(xs); i = i + 1) {
+    push(out, f(xs[i]));
+  }
+  return out;
+}
+
+print map([0, 1, 2, 3, 4], fn(x) { return x * x; });

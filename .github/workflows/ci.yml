@@ -1,0 +1,81 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [gcc, clang]
+        build_type: [Release, Debug]
+        exclude:
+          - os: macos-latest
+            compiler: gcc
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select compiler
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            echo "CC=gcc" >> "$GITHUB_ENV"; echo "CXX=g++" >> "$GITHUB_ENV"
+          else
+            echo "CC=clang" >> "$GITHUB_ENV"; echo "CXX=clang++" >> "$GITHUB_ENV"
+          fi
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLUMEN_WERROR=ON
+      - run: cmake --build build -j
+      - run: ./build/lumen_tests
+      - name: Run every example
+        run: |
+          for f in examples/*.lum; do
+            echo "== $f"
+            ./build/lumen "$f" > /dev/null
+          done
+      - name: Disassembly and stats do not crash
+        run: |
+          ./build/lumen --dump examples/primes.lum > /dev/null
+          ./build/lumen --stats examples/sorting.lum > /dev/null
+          ./build/lumen --no-optimize --no-peephole examples/closures.lum > /dev/null
+
+  sanitize:
+    name: asan + ubsan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env: { CC: clang, CXX: clang++ }
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DLUMEN_SANITIZE=ON
+      - run: cmake --build build -j
+      - env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ./build/lumen_tests
+
+  gc-stress:
+    name: gc stress
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build build -j
+      # Every example again with a collection forced on every allocation, which
+      # is where a missing root actually shows up.
+      - run: |
+          for f in examples/*.lum; do
+            echo "== $f"
+            diff <(./build/lumen "$f") <(./build/lumen --stress-gc "$f")
+          done
+
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build -j --target lumen_bench
+      # Informational only: shared runners are far too noisy to gate on.
+      - run: ./build/lumen_bench

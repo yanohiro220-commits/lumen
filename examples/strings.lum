@@ -1,0 +1,38 @@
+# String handling: indexing, building, and comparison.
+#= olleh
+#= true
+#= false
+#= 3
+#= a-b-c
+
+fn reverse(s) {
+  let out = "";
+  for (let i = len(s) - 1; i >= 0; i = i - 1) {
+    out = out + s[i];
+  }
+  return out;
+}
+print reverse("hello");
+
+fn is_palindrome(s) { return s == reverse(s); }
+print is_palindrome("racecar");
+print is_palindrome("lumen");
+
+fn count_char(s, c) {
+  let n = 0;
+  for (let i = 0; i < len(s); i = i + 1) {
+    if (s[i] == c) { n = n + 1; }
+  }
+  return n;
+}
+print count_char("abracadabra", "a") - 2;
+
+fn join(parts, sep) {
+  let out = "";
+  for (let i = 0; i < len(parts); i = i + 1) {
+    if (i > 0) { out = out + sep; }
+    out = out + parts[i];
+  }
+  return out;
+}
+print join(["a", "b", "c"], "-");
