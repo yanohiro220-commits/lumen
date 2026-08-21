@@ -76,6 +76,12 @@ int main() {
   constexpr int kRepeats = 3;
 
   for (const auto& b : benchmarks()) {
+    // Announced and flushed before the benchmark runs, not after. stdout to a
+    // pipe is block buffered, so a crash discards everything since the last
+    // flush and the log names nothing at all.
+    std::printf("%-28s ", b.name);
+    std::fflush(stdout);
+
     std::ostringstream sink;
 
     auto measure = [&](lumen::RunOptions opts) {
@@ -104,13 +110,15 @@ int main() {
     const auto [baseline, r2] = measure(slow);
 
     if (!r1.ok || !r2.ok) {
-      std::printf("%-28s FAILED: %s\n", b.name,
+      std::printf("FAILED: %s\n",
                   r1.ok ? r2.runtime_error.c_str() : r1.runtime_error.c_str());
+      std::fflush(stdout);
       continue;
     }
-    std::printf("%-28s %11.3fs %11.3fs %9.2fx %14llu\n", b.name, optimized,
-                baseline, baseline / optimized,
+    std::printf("%11.3fs %11.3fs %9.2fx %14llu\n", optimized, baseline,
+                baseline / optimized,
                 static_cast<unsigned long long>(r1.vm.instructions));
+    std::fflush(stdout);
   }
 
   return 0;
