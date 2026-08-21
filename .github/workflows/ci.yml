@@ -43,6 +43,19 @@ jobs:
           ./build/lumen --stats examples/sorting.lum > /dev/null
           ./build/lumen --no-optimize --no-peephole examples/closures.lum > /dev/null
 
+  gcc-backtrace:
+    name: gcc backtrace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y gdb
+      - env: { CC: gcc, CXX: g++ }
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build build -j
+      - name: Run under gdb
+        run: |
+          gdb -batch -ex run -ex 'bt 40' -ex 'info locals' --args ./build/lumen_tests 2>&1 | tail -60
+
   computed-goto:
     name: computed-goto dispatch
     runs-on: ubuntu-latest
