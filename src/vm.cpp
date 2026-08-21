@@ -7,16 +7,23 @@
 
 namespace lumen {
 
-// Computed-goto dispatch where the compiler supports labels-as-values.
+// Two dispatch strategies, selected at build time.
 //
 // A switch compiles to one indirect branch shared by every opcode, so the
-// processor's branch predictor sees a single site with dozens of targets and
-// mispredicts constantly. Threading the dispatch into the tail of each handler
-// gives each opcode its own branch site, and opcode sequences are highly
-// correlated - a GET_LOCAL is usually followed by the same thing - so those
-// sites predict well. The switch path below is kept working because it is the
-// only portable one, and both are exercised by the test suite.
-#if defined(__GNUC__) || defined(__clang__)
+// branch predictor sees a single site with dozens of targets and mispredicts
+// constantly. Threading the dispatch into the tail of each handler gives every
+// opcode its own site, and opcode sequences are highly correlated - a
+// GET_LOCAL is usually followed by the same thing - so those sites predict
+// well.
+//
+// The computed-goto path is nonetheless **off by default**. It is a GNU
+// extension, it is verified under Clang, and under GCC it crashes on the first
+// program the VM runs - a fault that has not been root-caused and that could
+// not be reproduced locally. Shipping a default that segfaults on a major
+// compiler to buy a few percent is the wrong trade, so the portable switch is
+// the default and the extension is opt-in via -DLUMEN_COMPUTED_GOTO=ON.
+// Both paths are built and tested in CI.
+#if defined(LUMEN_USE_COMPUTED_GOTO) && (defined(__GNUC__) || defined(__clang__))
 #define LUMEN_COMPUTED_GOTO 1
 #endif
 

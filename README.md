@@ -90,12 +90,14 @@ runs and is subtly incorrect rather than one that crashes:
 
 ### VM
 
-A stack machine with computed-goto dispatch where the compiler supports
-labels-as-values. A `switch` compiles to one indirect branch shared by every
-opcode, so the predictor sees a single site with dozens of targets and
-mispredicts constantly; threading the dispatch into the tail of each handler
-gives each opcode its own site, and opcode sequences are highly correlated. The
-portable `switch` path is kept working and both are exercised by the tests.
+A stack machine with two dispatch strategies. A `switch` compiles to one
+indirect branch shared by every opcode, so the predictor sees a single site with
+dozens of targets and mispredicts constantly; threading the dispatch into the
+tail of each handler gives every opcode its own site, and opcode sequences are
+highly correlated.
+
+The computed-goto path is **off by default** — see Known issues. Build with
+`-DLUMEN_COMPUTED_GOTO=ON` to enable it. Both paths are built and tested in CI.
 
 Opcodes are declared once in an X-macro, and the enum, the disassembler's name
 table and the dispatch table are all generated from it. Those three have to
@@ -213,6 +215,26 @@ satisfy an absence check.
 **Tokens outliving their source.** `Token::text` is a `string_view` into the
 source, and a test that scanned a temporary left every view dangling the moment
 the statement ended.
+
+## Known issues
+
+**Computed-goto dispatch crashes under GCC.** The labels-as-values path is
+verified under Clang on Linux and macOS, including under AddressSanitizer and
+UBSan, but a GCC build segfaults on the first program the VM runs. It was not
+reproducible locally — Homebrew's GCC cannot build against this machine's macOS
+SDK — and the cause has not been established, so it is not written up here as
+though it were understood.
+
+What ruled things out along the way: the jump table was moved out of
+function-scope static storage, which the GNU manual warns about; it was padded
+to 256 entries so an out-of-range opcode traps with a diagnostic instead of
+jumping into whatever follows; and the whole tree was checked with clang
+`-Wshadow-all`, which is stricter than GCC's `-Wshadow`. None of those fixed it,
+though the padding is worth keeping on its own merits — a `switch` has
+`default:` and a jump table has nothing.
+
+The portable `switch` is therefore the default. Shipping a default that
+segfaults on a major compiler to buy a few percent is the wrong trade.
 
 ## Language
 

@@ -43,6 +43,20 @@ jobs:
           ./build/lumen --stats examples/sorting.lum > /dev/null
           ./build/lumen --no-optimize --no-peephole examples/closures.lum > /dev/null
 
+  computed-goto:
+    name: computed-goto dispatch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The GNU extension path, built and tested under Clang where it is known
+      # to work. Keeping it in CI is the only thing that stops an opt-in path
+      # from quietly rotting.
+      - env: { CC: clang, CXX: clang++ }
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLUMEN_COMPUTED_GOTO=ON
+      - run: cmake --build build -j
+      - run: ./build/lumen_tests
+      - run: ./build/lumen_bench
+
   sanitize:
     name: asan + ubsan
     runs-on: ubuntu-latest
