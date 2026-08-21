@@ -69,8 +69,8 @@ struct Expr {
 
 struct LiteralExpr : Expr {
   Literal value;
-  LiteralExpr(Literal v, int line)
-      : Expr(Kind::Literal, line), value(std::move(v)) {}
+  LiteralExpr(Literal v, int ln)
+      : Expr(Kind::Literal, ln), value(std::move(v)) {}
 };
 
 struct VariableExpr : Expr {
@@ -79,8 +79,8 @@ struct VariableExpr : Expr {
   // hash at run time; otherwise it is a stack slot or an upvalue index.
   int slot = -1;
   bool is_upvalue = false;
-  VariableExpr(std::string n, int line)
-      : Expr(Kind::Variable, line), name(std::move(n)) {}
+  VariableExpr(std::string n, int ln)
+      : Expr(Kind::Variable, ln), name(std::move(n)) {}
 };
 
 struct AssignExpr : Expr {
@@ -88,22 +88,22 @@ struct AssignExpr : Expr {
   ExprPtr value;
   int slot = -1;
   bool is_upvalue = false;
-  AssignExpr(std::string n, ExprPtr v, int line)
-      : Expr(Kind::Assign, line), name(std::move(n)), value(std::move(v)) {}
+  AssignExpr(std::string n, ExprPtr v, int ln)
+      : Expr(Kind::Assign, ln), name(std::move(n)), value(std::move(v)) {}
 };
 
 struct UnaryExpr : Expr {
   TokenType op;
   ExprPtr operand;
-  UnaryExpr(TokenType o, ExprPtr e, int line)
-      : Expr(Kind::Unary, line), op(o), operand(std::move(e)) {}
+  UnaryExpr(TokenType o, ExprPtr e, int ln)
+      : Expr(Kind::Unary, ln), op(o), operand(std::move(e)) {}
 };
 
 struct BinaryExpr : Expr {
   TokenType op;
   ExprPtr left, right;
-  BinaryExpr(TokenType o, ExprPtr l, ExprPtr r, int line)
-      : Expr(Kind::Binary, line), op(o), left(std::move(l)), right(std::move(r)) {}
+  BinaryExpr(TokenType o, ExprPtr l, ExprPtr r, int ln)
+      : Expr(Kind::Binary, ln), op(o), left(std::move(l)), right(std::move(r)) {}
 };
 
 // `and` / `or`, kept separate from Binary because they short circuit and so
@@ -111,33 +111,33 @@ struct BinaryExpr : Expr {
 struct LogicalExpr : Expr {
   TokenType op;
   ExprPtr left, right;
-  LogicalExpr(TokenType o, ExprPtr l, ExprPtr r, int line)
-      : Expr(Kind::Logical, line), op(o), left(std::move(l)), right(std::move(r)) {}
+  LogicalExpr(TokenType o, ExprPtr l, ExprPtr r, int ln)
+      : Expr(Kind::Logical, ln), op(o), left(std::move(l)), right(std::move(r)) {}
 };
 
 struct CallExpr : Expr {
   ExprPtr callee;
   std::vector<ExprPtr> args;
-  CallExpr(ExprPtr c, std::vector<ExprPtr> a, int line)
-      : Expr(Kind::Call, line), callee(std::move(c)), args(std::move(a)) {}
+  CallExpr(ExprPtr c, std::vector<ExprPtr> a, int ln)
+      : Expr(Kind::Call, ln), callee(std::move(c)), args(std::move(a)) {}
 };
 
 struct ListExpr : Expr {
   std::vector<ExprPtr> items;
-  ListExpr(std::vector<ExprPtr> i, int line)
-      : Expr(Kind::ListLiteral, line), items(std::move(i)) {}
+  ListExpr(std::vector<ExprPtr> i, int ln)
+      : Expr(Kind::ListLiteral, ln), items(std::move(i)) {}
 };
 
 struct IndexExpr : Expr {
   ExprPtr target, index;
-  IndexExpr(ExprPtr t, ExprPtr i, int line)
-      : Expr(Kind::Index, line), target(std::move(t)), index(std::move(i)) {}
+  IndexExpr(ExprPtr t, ExprPtr i, int ln)
+      : Expr(Kind::Index, ln), target(std::move(t)), index(std::move(i)) {}
 };
 
 struct IndexAssignExpr : Expr {
   ExprPtr target, index, value;
-  IndexAssignExpr(ExprPtr t, ExprPtr i, ExprPtr v, int line)
-      : Expr(Kind::IndexAssign, line), target(std::move(t)), index(std::move(i)),
+  IndexAssignExpr(ExprPtr t, ExprPtr i, ExprPtr v, int ln)
+      : Expr(Kind::IndexAssign, ln), target(std::move(t)), index(std::move(i)),
         value(std::move(v)) {}
 };
 
@@ -145,8 +145,8 @@ struct FunctionBody;
 
 struct LambdaExpr : Expr {
   std::shared_ptr<FunctionBody> body;
-  LambdaExpr(std::shared_ptr<FunctionBody> b, int line)
-      : Expr(Kind::Lambda, line), body(std::move(b)) {}
+  LambdaExpr(std::shared_ptr<FunctionBody> b, int ln)
+      : Expr(Kind::Lambda, ln), body(std::move(b)) {}
 };
 
 struct Stmt {
@@ -162,43 +162,43 @@ struct Stmt {
 
 struct ExpressionStmt : Stmt {
   ExprPtr expr;
-  ExpressionStmt(ExprPtr e, int line)
-      : Stmt(Kind::Expression, line), expr(std::move(e)) {}
+  ExpressionStmt(ExprPtr e, int ln)
+      : Stmt(Kind::Expression, ln), expr(std::move(e)) {}
 };
 
 struct PrintStmt : Stmt {
   ExprPtr expr;
-  PrintStmt(ExprPtr e, int line) : Stmt(Kind::Print, line), expr(std::move(e)) {}
+  PrintStmt(ExprPtr e, int ln) : Stmt(Kind::Print, ln), expr(std::move(e)) {}
 };
 
 struct LetStmt : Stmt {
   std::string name;
   ExprPtr initializer;  // may be null, meaning nil
   int slot = -1;
-  LetStmt(std::string n, ExprPtr init, int line)
-      : Stmt(Kind::Let, line), name(std::move(n)), initializer(std::move(init)) {}
+  LetStmt(std::string n, ExprPtr init, int ln)
+      : Stmt(Kind::Let, ln), name(std::move(n)), initializer(std::move(init)) {}
 };
 
 struct BlockStmt : Stmt {
   std::vector<StmtPtr> statements;
-  BlockStmt(std::vector<StmtPtr> s, int line)
-      : Stmt(Kind::Block, line), statements(std::move(s)) {}
+  BlockStmt(std::vector<StmtPtr> s, int ln)
+      : Stmt(Kind::Block, ln), statements(std::move(s)) {}
 };
 
 struct IfStmt : Stmt {
   ExprPtr condition;
   StmtPtr then_branch;
   StmtPtr else_branch;  // may be null
-  IfStmt(ExprPtr c, StmtPtr t, StmtPtr e, int line)
-      : Stmt(Kind::If, line), condition(std::move(c)), then_branch(std::move(t)),
+  IfStmt(ExprPtr c, StmtPtr t, StmtPtr e, int ln)
+      : Stmt(Kind::If, ln), condition(std::move(c)), then_branch(std::move(t)),
         else_branch(std::move(e)) {}
 };
 
 struct WhileStmt : Stmt {
   ExprPtr condition;
   StmtPtr body;
-  WhileStmt(ExprPtr c, StmtPtr b, int line)
-      : Stmt(Kind::While, line), condition(std::move(c)), body(std::move(b)) {}
+  WhileStmt(ExprPtr c, StmtPtr b, int ln)
+      : Stmt(Kind::While, ln), condition(std::move(c)), body(std::move(b)) {}
 };
 
 // `for` keeps its own node rather than desugaring to a while loop, because
@@ -210,15 +210,15 @@ struct ForStmt : Stmt {
   ExprPtr condition;    // may be null, meaning always true
   ExprPtr increment;    // may be null
   StmtPtr body;
-  ForStmt(StmtPtr i, ExprPtr c, ExprPtr inc, StmtPtr b, int line)
-      : Stmt(Kind::For, line), initializer(std::move(i)), condition(std::move(c)),
+  ForStmt(StmtPtr i, ExprPtr c, ExprPtr inc, StmtPtr b, int ln)
+      : Stmt(Kind::For, ln), initializer(std::move(i)), condition(std::move(c)),
         increment(std::move(inc)), body(std::move(b)) {}
 };
 
 struct ReturnStmt : Stmt {
   ExprPtr value;  // may be null
-  ReturnStmt(ExprPtr v, int line)
-      : Stmt(Kind::Return, line), value(std::move(v)) {}
+  ReturnStmt(ExprPtr v, int ln)
+      : Stmt(Kind::Return, ln), value(std::move(v)) {}
 };
 
 struct FunctionBody {
@@ -231,16 +231,16 @@ struct FunctionBody {
 struct FunctionStmt : Stmt {
   std::shared_ptr<FunctionBody> body;
   int slot = -1;
-  FunctionStmt(std::shared_ptr<FunctionBody> b, int line)
-      : Stmt(Kind::Function, line), body(std::move(b)) {}
+  FunctionStmt(std::shared_ptr<FunctionBody> b, int ln)
+      : Stmt(Kind::Function, ln), body(std::move(b)) {}
 };
 
 struct BreakStmt : Stmt {
-  explicit BreakStmt(int line) : Stmt(Kind::Break, line) {}
+  explicit BreakStmt(int ln) : Stmt(Kind::Break, ln) {}
 };
 
 struct ContinueStmt : Stmt {
-  explicit ContinueStmt(int line) : Stmt(Kind::Continue, line) {}
+  explicit ContinueStmt(int ln) : Stmt(Kind::Continue, ln) {}
 };
 
 // A parsed program: top-level statements.
