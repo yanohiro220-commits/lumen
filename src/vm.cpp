@@ -350,7 +350,13 @@ VM::Result VM::execute() {
   } while (0)
 
 #ifdef LUMEN_COMPUTED_GOTO
-  static void* const dispatch_table[] = {
+  // Not `static`. The GNU manual's own caveat about jump tables of label
+  // addresses is that they are only valid inside the function the labels
+  // belong to, and a function-scope `static` initialised from them interacts
+  // badly with a compiler that clones or specialises the function. Automatic
+  // storage sidesteps the whole question, and the table is built once per
+  // program run rather than once per instruction.
+  void* const dispatch_table[] = {
 #define LUMEN_OP_LABEL(name, text) &&op_##name,
       LUMEN_OPCODES(LUMEN_OP_LABEL)
 #undef LUMEN_OP_LABEL
