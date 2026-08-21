@@ -350,20 +350,34 @@ VM::Result VM::execute() {
   } while (0)
 
 #ifdef LUMEN_COMPUTED_GOTO
-  // Not `static`. The GNU manual's own caveat about jump tables of label
-  // addresses is that they are only valid inside the function the labels
-  // belong to, and a function-scope `static` initialised from them interacts
-  // badly with a compiler that clones or specialises the function. Automatic
-  // storage sidesteps the whole question, and the table is built once per
-  // program run rather than once per instruction.
-  void* const dispatch_table[] = {
-#define LUMEN_OP_LABEL(name, text) &&op_##name,
-      LUMEN_OPCODES(LUMEN_OP_LABEL)
+  // A full 256-entry table, not one entry per opcode.
+  //
+  // A switch has `default:`; a jump table has nothing. Indexing a table of
+  // OpCount entries with a byte that is out of range jumps to whatever happens
+  // to follow it in memory, and the failure is a segmentation fault with no
+  // indication of where it came from. Padding the table so every possible byte
+  // lands on a trap turns that into a diagnosable error at the cost of about a
+  // kilobyte of stack.
+  //
+  // Not `static`, either. The GNU manual's own caveat is that a table of label
+  // addresses is only meaningful inside the function the labels belong to, and
+  // a function-scope static initialised from them interacts badly with a
+  // compiler that clones or specialises that function.
+  void* dispatch_table[256];
+  for (std::size_t i = 0; i < 256; ++i) dispatch_table[i] = &&op_Invalid;
+  {
+    std::size_t next = 0;
+#define LUMEN_OP_LABEL(name, text) dispatch_table[next++] = &&op_##name;
+    LUMEN_OPCODES(LUMEN_OP_LABEL)
 #undef LUMEN_OP_LABEL
-  };
-  static_assert(sizeof(dispatch_table) / sizeof(dispatch_table[0]) ==
-                    static_cast<std::size_t>(Op::OpCount),
-                "dispatch table is out of step with the opcode enum");
+    if (next != static_cast<std::size_t>(Op::OpCount)) {
+      // The enum, the name table and this table are all generated from the
+      // same list, so they cannot drift - but the check costs nothing and the
+      // failure it would catch is untraceable.
+      RUNTIME_ERROR("internal error: dispatch table does not match the opcode enum");
+    }
+  }
+
 #define VM_TALLY()                                                          \
   do {                                                                      \
     ++stats_.instructions;                                                  \
@@ -373,7 +387,7 @@ VM::Result VM::execute() {
 #define VM_DISPATCH()                                  \
   do {                                                 \
     if (count_instructions_) VM_TALLY();               \
-    goto* dispatch_table[READ_BYTE()];                 \
+    goto *dispatch_table[READ_BYTE()];                 \
   } while (0)
 #define VM_BEGIN VM_DISPATCH();
 #define VM_CASE(name) op_##name:
@@ -747,6 +761,15 @@ VM::Result VM::execute() {
     push(frame->slots[b]);
     VM_NEXT;
   }
+
+#ifdef LUMEN_COMPUTED_GOTO
+op_Invalid:
+  RUNTIME_ERROR("corrupt bytecode: opcode " +
+                std::to_string(static_cast<unsigned>(frame->ip[-1])) +
+                " at offset " +
+                std::to_string(frame->ip - 1 -
+                               frame->closure->function->chunk.code().data()));
+#endif
 
   VM_END
 
