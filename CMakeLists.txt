@@ -10,11 +10,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 option(LUMEN_WERROR "Treat warnings as errors" ON)
-# Computed-goto dispatch is a GNU extension and is off by default. It is
-# measurably faster and it is verified under Clang, but it produces a crash
-# under GCC that has not been root-caused, and a default that segfaults on a
-# major compiler is not a default. See "Known issues" in the README.
-option(LUMEN_COMPUTED_GOTO "Use computed-goto dispatch in the VM (GNU extension)" OFF)
+# Computed-goto dispatch is a GNU extension, so it is a build option rather than
+# something the code assumes. Both paths are built and tested in CI.
+option(LUMEN_COMPUTED_GOTO "Use computed-goto dispatch in the VM (GNU extension)" ON)
 option(LUMEN_SANITIZE "Build with address and UB sanitizers" OFF)
 
 add_library(lumen_core

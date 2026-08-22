@@ -52,20 +52,22 @@ jobs:
       - env: { CC: gcc, CXX: g++ }
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
       - run: cmake --build build -j
+      # Kept after the crash it was added to diagnose. It costs one short job
+      # and it means the next segfault arrives with a backtrace attached
+      # instead of an empty log.
       - name: Run under gdb
         run: |
-          gdb -batch -ex run -ex 'bt 40' -ex 'info locals' --args ./build/lumen_tests 2>&1 | tail -60
+          gdb -batch -ex run -ex 'bt 40' --args ./build/lumen_tests 2>&1 | tail -50
 
-  computed-goto:
-    name: computed-goto dispatch
+  switch-dispatch:
+    name: switch dispatch
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # The GNU extension path, built and tested under Clang where it is known
-      # to work. Keeping it in CI is the only thing that stops an opt-in path
-      # from quietly rotting.
-      - env: { CC: clang, CXX: clang++ }
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLUMEN_COMPUTED_GOTO=ON
+      # Computed goto is the default, so the portable path needs its own job or
+      # it stops being exercised at all.
+      - env: { CC: gcc, CXX: g++ }
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLUMEN_COMPUTED_GOTO=OFF
       - run: cmake --build build -j
       - run: ./build/lumen_tests
       - run: ./build/lumen_bench

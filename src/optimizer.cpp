@@ -167,22 +167,21 @@ ExprPtr Optimizer::optimize_expr(ExprPtr expr) {
     case Expr::Kind::Unary: {
       auto* e = static_cast<UnaryExpr*>(expr.get());
       e->operand = optimize_expr(std::move(e->operand));
-      return fold_unary(e, std::move(expr));
+      return fold_unary(std::move(expr));
     }
     case Expr::Kind::Binary: {
       auto* e = static_cast<BinaryExpr*>(expr.get());
       e->left = optimize_expr(std::move(e->left));
       e->right = optimize_expr(std::move(e->right));
-      ExprPtr folded = fold_binary(e, std::move(expr));
+      ExprPtr folded = fold_binary(std::move(expr));
       if (folded->kind != Expr::Kind::Binary) return folded;
-      return simplify_algebraic(static_cast<BinaryExpr*>(folded.get()),
-                                std::move(folded));
+      return simplify_algebraic(std::move(folded));
     }
     case Expr::Kind::Logical: {
       auto* e = static_cast<LogicalExpr*>(expr.get());
       e->left = optimize_expr(std::move(e->left));
       e->right = optimize_expr(std::move(e->right));
-      return fold_logical(e, std::move(expr));
+      return fold_logical(std::move(expr));
     }
     case Expr::Kind::Assign: {
       auto* e = static_cast<AssignExpr*>(expr.get());
@@ -223,7 +222,8 @@ ExprPtr Optimizer::optimize_expr(ExprPtr expr) {
   }
 }
 
-ExprPtr Optimizer::fold_unary(UnaryExpr* node, ExprPtr owner) {
+ExprPtr Optimizer::fold_unary(ExprPtr owner) {
+  auto* node = static_cast<UnaryExpr*>(owner.get());
   const Literal* operand = literal_of(node->operand.get());
   if (!operand) return owner;
 
@@ -238,7 +238,8 @@ ExprPtr Optimizer::fold_unary(UnaryExpr* node, ExprPtr owner) {
   return owner;
 }
 
-ExprPtr Optimizer::fold_binary(BinaryExpr* node, ExprPtr owner) {
+ExprPtr Optimizer::fold_binary(ExprPtr owner) {
+  auto* node = static_cast<BinaryExpr*>(owner.get());
   const Literal* l = literal_of(node->left.get());
   const Literal* r = literal_of(node->right.get());
   if (!l || !r) return owner;
@@ -299,7 +300,8 @@ ExprPtr Optimizer::fold_binary(BinaryExpr* node, ExprPtr owner) {
   }
 }
 
-ExprPtr Optimizer::simplify_algebraic(BinaryExpr* node, ExprPtr owner) {
+ExprPtr Optimizer::simplify_algebraic(ExprPtr owner) {
+  auto* node = static_cast<BinaryExpr*>(owner.get());
   const Literal* l = literal_of(node->left.get());
   const Literal* r = literal_of(node->right.get());
 
@@ -350,7 +352,8 @@ ExprPtr Optimizer::simplify_algebraic(BinaryExpr* node, ExprPtr owner) {
   }
 }
 
-ExprPtr Optimizer::fold_logical(LogicalExpr* node, ExprPtr owner) {
+ExprPtr Optimizer::fold_logical(ExprPtr owner) {
+  auto* node = static_cast<LogicalExpr*>(owner.get());
   const Literal* l = literal_of(node->left.get());
   if (!l) return owner;
 

@@ -16,13 +16,10 @@ namespace lumen {
 // GET_LOCAL is usually followed by the same thing - so those sites predict
 // well.
 //
-// The computed-goto path is nonetheless **off by default**. It is a GNU
-// extension, it is verified under Clang, and under GCC it crashes on the first
-// program the VM runs - a fault that has not been root-caused and that could
-// not be reproduced locally. Shipping a default that segfaults on a major
-// compiler to buy a few percent is the wrong trade, so the portable switch is
-// the default and the extension is opt-in via -DLUMEN_COMPUTED_GOTO=ON.
-// Both paths are built and tested in CI.
+// It is still a GNU extension rather than something portable, so it lives
+// behind a build option (-DLUMEN_COMPUTED_GOTO, on by default) and the switch
+// stays a first-class path. Both are built and tested in CI, which is the only
+// thing that stops the unused one from rotting.
 #if defined(LUMEN_USE_COMPUTED_GOTO) && (defined(__GNUC__) || defined(__clang__))
 #define LUMEN_COMPUTED_GOTO 1
 #endif

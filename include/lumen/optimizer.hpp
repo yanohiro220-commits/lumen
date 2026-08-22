@@ -38,10 +38,18 @@ class Optimizer {
   StmtPtr optimize_stmt(StmtPtr stmt);
   ExprPtr optimize_expr(ExprPtr expr);
 
-  ExprPtr fold_binary(BinaryExpr* node, ExprPtr owner);
-  ExprPtr fold_unary(UnaryExpr* node, ExprPtr owner);
-  ExprPtr fold_logical(LogicalExpr* node, ExprPtr owner);
-  ExprPtr simplify_algebraic(BinaryExpr* node, ExprPtr owner);
+  // Each of these takes ownership and re-derives the typed node inside.
+  //
+  // They used to take (node, owner) as two arguments, and the caller built the
+  // node from the very pointer it was moving from in the same call. Argument
+  // evaluation order is unspecified in C++, so whether the node was computed
+  // before or after the move was up to the compiler - Clang happened to do it
+  // before, GCC after, and GCC got a null. Taking only the owner makes that
+  // mistake impossible to write.
+  ExprPtr fold_binary(ExprPtr owner);
+  ExprPtr fold_unary(ExprPtr owner);
+  ExprPtr fold_logical(ExprPtr owner);
+  ExprPtr simplify_algebraic(ExprPtr owner);
 
   static const Literal* literal_of(const Expr* e);
   static bool is_pure(const Expr* e);

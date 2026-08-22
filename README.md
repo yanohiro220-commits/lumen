@@ -96,8 +96,12 @@ dozens of targets and mispredicts constantly; threading the dispatch into the
 tail of each handler gives every opcode its own site, and opcode sequences are
 highly correlated.
 
-The computed-goto path is **off by default** — see Known issues. Build with
-`-DLUMEN_COMPUTED_GOTO=ON` to enable it. Both paths are built and tested in CI.
+Computed goto is the default; `-DLUMEN_COMPUTED_GOTO=OFF` selects the portable
+`switch`. Both are built and tested in CI, which is the only thing that keeps
+the unused one working. The jump table is padded to 256 entries with every
+unused slot pointing at a trap — a `switch` has `default:` and a jump table has
+nothing, so an out-of-range opcode should report itself rather than jump into
+whatever follows the table.
 
 Opcodes are declared once in an X-macro, and the enum, the disassembler's name
 table and the dispatch table are all generated from it. Those three have to
@@ -216,25 +220,40 @@ satisfy an absence check.
 source, and a test that scanned a temporary left every view dangling the moment
 the statement ended.
 
-## Known issues
+**A null pointer from unspecified argument evaluation order.** This one cost
+five CI round trips, and the write-up is here because the way it was found
+matters more than the fix.
 
-**Computed-goto dispatch crashes under GCC.** The labels-as-values path is
-verified under Clang on Linux and macOS, including under AddressSanitizer and
-UBSan, but a GCC build segfaults on the first program the VM runs. It was not
-reproducible locally — Homebrew's GCC cannot build against this machine's macOS
-SDK — and the cause has not been established, so it is not written up here as
-though it were understood.
+GCC builds segfaulted on the first program the VM ran. Clang was fine
+everywhere, including under ASan and UBSan. The obvious suspect was the
+computed-goto dispatch, since that is the one place the two compilers were being
+asked to do something non-standard — so the jump table was moved out of static
+storage, padded to 256 entries with a trap, and the tree was swept with clang
+`-Wshadow-all`. None of it helped. Turning computed goto off entirely did not
+help either, which finally ruled out the theory the previous three changes had
+all been built on.
 
-What ruled things out along the way: the jump table was moved out of
-function-scope static storage, which the GNU manual warns about; it was padded
-to 256 entries so an out-of-range opcode traps with a diagnostic instead of
-jumping into whatever follows; and the whole tree was checked with clang
-`-Wshadow-all`, which is stricter than GCC's `-Wshadow`. None of those fixed it,
-though the padding is worth keeping on its own merits — a `switch` has
-`default:` and a jump table has nothing.
+The actual cause was one line in the optimizer:
 
-The portable `switch` is therefore the default. Shipping a default that
-segfaults on a major compiler to buy a few percent is the wrong trade.
+```cpp
+return simplify_algebraic(static_cast<BinaryExpr*>(folded.get()), std::move(folded));
+```
+
+Argument evaluation order is unspecified in C++. Clang evaluates left to right,
+so `folded.get()` runs before the move and the node pointer is valid. GCC
+evaluates right to left, so `std::move(folded)` empties the `unique_ptr` first
+and `folded.get()` returns null. Nothing to do with dispatch, nothing to do with
+the VM, and invisible to a sanitiser because it is not a memory error — it is a
+perfectly legal null pointer being dereferenced.
+
+Two things fixed it properly. The helper now takes ownership and re-derives the
+node inside, so the two-argument form that made the mistake expressible no
+longer exists. And the CI job that got the answer — running the GCC build under
+`gdb` and printing a backtrace — is still there, because the reason this took
+five attempts is that the first four were guesses and the fifth was a
+measurement. The stdout flushing added along the way matters for the same
+reason: the earlier logs were empty because a segfault discards a block-buffered
+buffer, so CI reported a crash with no indication of where.
 
 ## Language
 
